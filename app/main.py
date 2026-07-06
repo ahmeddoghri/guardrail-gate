@@ -6,20 +6,24 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from . import security
+from .config import settings
 from .gate import GuardrailGate
+from .security import require_api_key
 
 app = FastAPI(title="guardrail-gate", version="0.1.0")
+security.install(app)
 _gate = GuardrailGate()
 
 
 class GuardRequest(BaseModel):
-    client_id: str
-    text: str
-    sources: Optional[list[str]] = None
+    client_id: str = Field(min_length=1, max_length=settings.max_client_id_chars)
+    text: str = Field(min_length=1, max_length=settings.max_text_chars)
+    sources: Optional[list[str]] = Field(default=None, max_length=settings.max_sources)
 
 
 class PIIMatchOut(BaseModel):
@@ -39,10 +43,18 @@ class GuardResponse(BaseModel):
 
 @app.get("/healthz")
 def healthz() -> dict:
+    """Liveness probe: the process is up."""
     return {"status": "ok"}
 
 
-@app.post("/v1/guard", response_model=GuardResponse)
+@app.get("/readyz")
+def readyz() -> dict:
+    """Readiness probe: the gate is wired and the service can serve."""
+    return {"status": "ready"}
+
+
+@app.post("/v1/guard", response_model=GuardResponse,
+          dependencies=[Depends(require_api_key)])
 def guard(req: GuardRequest):
     result = _gate.check(req.client_id, req.text, req.sources)
     if result.rate_limited:

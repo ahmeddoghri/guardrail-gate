@@ -43,3 +43,45 @@ def test_guard_without_sources_only_does_pii():
     })
     assert resp.status_code == 200
     assert resp.json()["allowed"] is True
+
+
+def test_readyz():
+    resp = client.get("/readyz")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ready"
+
+
+def test_empty_text_rejected():
+    resp = client.post("/v1/guard", json={"client_id": "c", "text": ""})
+    assert resp.status_code == 422
+
+
+def test_oversized_text_rejected():
+    from app.config import settings
+    resp = client.post("/v1/guard", json={
+        "client_id": "c", "text": "x" * (settings.max_text_chars + 1)})
+    assert resp.status_code == 422
+
+
+def test_request_id_header_present():
+    resp = client.get("/healthz")
+    assert resp.headers.get("x-request-id")
+
+
+def test_api_key_enforced_when_configured(monkeypatch):
+    monkeypatch.setenv("API_KEY", "s3cret")
+    import importlib
+    import app.config, app.security, app.main
+    importlib.reload(app.config)
+    importlib.reload(app.security)
+    reloaded = importlib.reload(app.main)
+    guarded = TestClient(reloaded.app)
+    assert guarded.post("/v1/guard", json={
+        "client_id": "c", "text": "hello"}).status_code == 401
+    ok = guarded.post("/v1/guard", json={"client_id": "c", "text": "hello"},
+                      headers={"X-API-Key": "s3cret"})
+    assert ok.status_code == 200
+    monkeypatch.delenv("API_KEY", raising=False)
+    importlib.reload(app.config)
+    importlib.reload(app.security)
+    importlib.reload(app.main)

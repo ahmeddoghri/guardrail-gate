@@ -1,7 +1,7 @@
 # guardrail-gate
 
 ![CI](https://github.com/ahmeddoghri/guardrail-gate/actions/workflows/ci.yml/badge.svg)
-![tests](https://img.shields.io/badge/tests-15%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-20%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![license](https://img.shields.io/badge/license-MIT-black)
 
@@ -117,10 +117,25 @@ For grounding, plug a real embedding-similarity or NLI-based entailment check
 in place of `check_grounding` if lexical overlap isn't precise enough for
 your domain.
 
+## Production configuration
+
+All settings have safe defaults; override via environment variables.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `API_KEY` | *(empty)* | When set, `/v1/guard` requires a matching `X-API-Key` header. Empty leaves the service open. |
+| `MAX_TEXT_CHARS` | `100000` | Rejects (422) text larger than this to bound memory. |
+| `MAX_SOURCES` | `256` | Caps how many source documents one request may carry. |
+
+The service exposes `GET /healthz` (liveness) and `GET /readyz` (readiness).
+Every response carries an `X-Request-ID` header and requests are logged with
+method, path, status, and latency. Unhandled errors return a structured `500`
+without leaking stack traces.
+
 ## Tests
 
 ```bash
-pip install -r requirements-dev.txt && pytest -q      # 15 passing
+pip install -r requirements-dev.txt && pytest -q      # 20 passing
 ```
 
 ## License
