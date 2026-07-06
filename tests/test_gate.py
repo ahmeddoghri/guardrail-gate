@@ -1,8 +1,8 @@
-from app.pii import RegexPIIDetector, redact
-from app.grounding import check_grounding
-from app.ratelimit import TokenBucketLimiter
+from app.eval import SOURCE_DOCS, eval_grounding, eval_pii
 from app.gate import GuardrailGate
-from app.eval import eval_pii, eval_grounding, SOURCE_DOCS
+from app.grounding import check_grounding
+from app.pii import RegexPIIDetector, redact
+from app.ratelimit import TokenBucketLimiter
 
 
 def test_detects_email():

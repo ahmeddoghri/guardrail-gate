@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.eval import SOURCE_DOCS
+from app.main import app
 
 client = TestClient(app)
 
@@ -71,7 +71,10 @@ def test_request_id_header_present():
 def test_api_key_enforced_when_configured(monkeypatch):
     monkeypatch.setenv("API_KEY", "s3cret")
     import importlib
-    import app.config, app.security, app.main
+
+    import app.config
+    import app.main
+    import app.security
     importlib.reload(app.config)
     importlib.reload(app.security)
     reloaded = importlib.reload(app.main)

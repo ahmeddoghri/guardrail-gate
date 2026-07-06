@@ -13,7 +13,6 @@ Two labeled benchmarks bundled together:
 """
 from __future__ import annotations
 
-
 from .gate import GuardrailGate
 from .grounding import check_grounding
 from .pii import RegexPIIDetector
