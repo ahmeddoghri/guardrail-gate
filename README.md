@@ -5,6 +5,10 @@
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![license](https://img.shields.io/badge/license-MIT-black)
 
+> **Catch PII leaks and ungrounded claims in a single pass** — one
+> allowed/blocked decision with the reasons attached. Zero API keys to try
+> it: `python -m app.eval`.
+
 A guardrail service that sits between your LLM's output and your user. It
 redacts PII, checks whether each claim in the response is actually supported
 by the source documents you retrieved, and rate-limits abusive clients —
