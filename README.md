@@ -5,34 +5,40 @@
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![license](https://img.shields.io/badge/license-MIT-black)
 
-> **Catch PII leaks and ungrounded claims in a single pass** — one
-> allowed/blocked decision with the reasons attached. Zero API keys to try
-> it: `python -m app.eval`.
+> **Catch PII leaks and ungrounded claims in a single pass.** One
+> allowed/blocked decision with the reasons attached. Zero API keys to
+> try it: `python -m app.eval`.
 
-A guardrail service that sits between your LLM's output and your user. It
-redacts PII, checks whether each claim in the response is actually supported
-by the source documents you retrieved, and rate-limits abusive clients —
-then gives you a single allowed/blocked decision with the reasons attached.
+Picture the coworker who overshares personal details AND makes things up,
+in the same sentence, without noticing either. That's an unguarded LLM
+response. guardrail-gate is the bouncer standing between your model's
+output and your user: it redacts PII, checks whether each claim is
+actually supported by the sources you retrieved, and rate-limits abusive
+clients, then hands you one allowed/blocked decision with the reasons
+attached.
 
-This is the same discipline I built into regulatory-document LLM pipelines:
-you don't ship a response to a user (or a compliance reviewer) without
-knowing whether it's grounded in something real, and you don't let a chat
-transcript leak an SSN because nobody thought to check. The version here is
-rebuilt from scratch to be small, runnable, and inspectable — no proprietary
-code, same idea.
+This is the same discipline I built into regulatory-document LLM
+pipelines: you don't ship a response to a user, or a compliance reviewer,
+without knowing whether it's grounded in something real, and you don't
+let a chat transcript leak an SSN because nobody thought to check. The
+version here is rebuilt from scratch to be small, runnable, and
+inspectable. No proprietary code, same idea.
 
 ## Why two separate checks
 
-PII and hallucination are different failure modes and conflating them
+PII and hallucination are different failure modes, and conflating them
 produces worse guardrails, not better ones:
 
-- **PII redaction** doesn't care if the text is *true* — an email address is
-  still an email address whether the surrounding claim is accurate or not.
-- **Grounding** doesn't care if the text is *sensitive* — a hallucinated
-  shipping date is a problem even if it contains zero PII.
+- **PII redaction** doesn't care if the text is *true*. An email address
+  is still an email address whether the surrounding claim checks out or
+  not.
+- **Grounding** doesn't care if the text is *sensitive*. A hallucinated
+  shipping date is a problem even with zero PII anywhere near it.
 
-Running them as one combined "safety score" tends to hide which one actually
-triggered. This keeps them separate and reports both.
+Running them as one combined "safety score" tends to hide which one
+actually triggered. This keeps them separate and reports both, like a
+bouncer checking your ID and your invite list as two different things,
+not one vague vibe check.
 
 ## The result, on labeled benchmarks
 
@@ -48,13 +54,13 @@ accuracy=83%  (n=6)
 ```
 
 The PII benchmark is regex-complete for structured PII (emails, phone
-numbers, SSNs, credit cards, IPs) — it won't catch a name or an address
+numbers, SSNs, credit cards, IPs). It won't catch a name or address
 mentioned in prose, which needs real NER. The grounding benchmark is
 lexical-overlap based, which reliably catches the common case (the model
-asserting something the sources never said) but won't catch subtle factual
-drift within an otherwise-grounded sentence. Both limitations are disclosed
-here on purpose — a guardrail you don't understand the limits of is worse
-than no guardrail, because it creates false confidence.
+asserting something the sources never said) but won't catch subtle
+factual drift within an otherwise-grounded sentence. Both limitations are
+disclosed here on purpose. A guardrail you don't understand the limits of
+is worse than no guardrail, because it creates false confidence.
 
 ## Install & run
 
@@ -117,9 +123,9 @@ class MyNERDetector:
 GuardrailGate(pii_detector=MyNERDetector())
 ```
 
-For grounding, plug a real embedding-similarity or NLI-based entailment check
-in place of `check_grounding` if lexical overlap isn't precise enough for
-your domain.
+For grounding, plug a real embedding-similarity or NLI-based entailment
+check in place of `check_grounding` if lexical overlap isn't precise
+enough for your domain.
 
 ## Production configuration
 
@@ -131,10 +137,10 @@ All settings have safe defaults; override via environment variables.
 | `MAX_TEXT_CHARS` | `100000` | Rejects (422) text larger than this to bound memory. |
 | `MAX_SOURCES` | `256` | Caps how many source documents one request may carry. |
 
-The service exposes `GET /healthz` (liveness) and `GET /readyz` (readiness).
-Every response carries an `X-Request-ID` header and requests are logged with
-method, path, status, and latency. Unhandled errors return a structured `500`
-without leaking stack traces.
+The service exposes `GET /healthz` (liveness) and `GET /readyz`
+(readiness). Every response carries an `X-Request-ID` header, requests
+are logged with method, path, status, and latency, and unhandled errors
+return a structured `500` without leaking stack traces.
 
 ## Tests
 
@@ -144,7 +150,7 @@ pip install -r requirements-dev.txt && pytest -q      # 20 passing
 
 ## More in this series
 
-Nine small, dependency-light, benchmarked tools for LLM/ML infrastructure — each reproduces its headline number locally with no API keys:
+Nine small, dependency-light, benchmarked tools for LLM/ML infrastructure. Each one reproduces its headline number locally with no API keys:
 
 [agentmem](https://github.com/ahmeddoghri/agentmem) · [rubricagent](https://github.com/ahmeddoghri/rubricagent) · [clarifyrag](https://github.com/ahmeddoghri/clarifyrag) · [churnfm](https://github.com/ahmeddoghri/churnfm) · [citebench](https://github.com/ahmeddoghri/citebench) · [tablextract](https://github.com/ahmeddoghri/tablextract) · [vllm-cost-router](https://github.com/ahmeddoghri/vllm-cost-router) · [taggate](https://github.com/ahmeddoghri/taggate)
 
