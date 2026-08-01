@@ -1,0 +1,166 @@
+{
+  "pii": {
+    "v1 regex": {
+      "clean": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "n": 8,
+        "errors": []
+      },
+      "obfuscated": {
+        "precision": 1.0,
+        "recall": 0.2857,
+        "f1": 0.4444,
+        "false_positives": 0,
+        "false_negatives": 5,
+        "n": 7,
+        "errors": [
+          "expected ['email'], got []: Email me at jane.doe [at] example.com",
+          "expected ['email'], got []: reach me: jane dot doe at example dot com",
+          "expected ['ssn'], got []: My social is 123 45 6789",
+          "expected ['ssn'], got []: SSN: 123456789 on file",
+          "expected ['phone'], got []: Ring me on +44 20 7946 0958"
+        ]
+      },
+      "decoy": {
+        "precision": 0.0,
+        "recall": 1.0,
+        "f1": 0.0,
+        "false_positives": 4,
+        "false_negatives": 0,
+        "n": 5,
+        "errors": [
+          "expected [], got ['ip_address']: Version 1.2.3.4 was released yesterday.",
+          "expected [], got ['credit_card']: Order 4111 1111 1111 1112 shipped today.",
+          "expected [], got ['phone']: We measured between 100-200-3000 units.",
+          "expected [], got ['ssn']: The SKU is 999-99-9999 in our catalog."
+        ]
+      },
+      "all": {
+        "precision": 0.6923,
+        "recall": 0.6429,
+        "f1": 0.6667,
+        "false_positives": 4,
+        "false_negatives": 5,
+        "n": 20,
+        "errors": [
+          "expected ['email'], got []: Email me at jane.doe [at] example.com",
+          "expected ['email'], got []: reach me: jane dot doe at example dot com",
+          "expected ['ssn'], got []: My social is 123 45 6789",
+          "expected ['ssn'], got []: SSN: 123456789 on file",
+          "expected ['phone'], got []: Ring me on +44 20 7946 0958",
+          "expected [], got ['ip_address']: Version 1.2.3.4 was released yesterday.",
+          "expected [], got ['credit_card']: Order 4111 1111 1111 1112 shipped today.",
+          "expected [], got ['phone']: We measured between 100-200-3000 units.",
+          "expected [], got ['ssn']: The SKU is 999-99-9999 in our catalog."
+        ]
+      }
+    },
+    "v2 validating": {
+      "clean": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "n": 8,
+        "errors": []
+      },
+      "obfuscated": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "n": 7,
+        "errors": []
+      },
+      "decoy": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "n": 5,
+        "errors": []
+      },
+      "all": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "n": 20,
+        "errors": []
+      }
+    }
+  },
+  "grounding": {
+    "v1 overlap": {
+      "lexical": {
+        "accuracy": 0.8333,
+        "missed_hallucinations": 1,
+        "false_alarms": 0,
+        "n": 6,
+        "errors": [
+          "expected grounded=False, got True: The premium plan is completely free for the first year."
+        ]
+      },
+      "semantic": {
+        "accuracy": 0.25,
+        "missed_hallucinations": 6,
+        "false_alarms": 0,
+        "n": 8,
+        "errors": [
+          "expected grounded=False, got True: Refunds are processed within 10 business days of the ord",
+          "expected grounded=False, got True: The premium plan costs $49 per year and includes priorit",
+          "expected grounded=False, got True: The product ships within 30 to 50 business days after or",
+          "expected grounded=False, got True: Refunds are not processed within 10 business days of the",
+          "expected grounded=False, got True: The premium plan does not include priority support at $4",
+          "expected grounded=False, got True: The product ships within 3 to 5 business days after the "
+        ]
+      },
+      "all": {
+        "accuracy": 0.5,
+        "missed_hallucinations": 7,
+        "false_alarms": 0,
+        "n": 14,
+        "errors": [
+          "expected grounded=False, got True: The premium plan is completely free for the first year.",
+          "expected grounded=False, got True: Refunds are processed within 10 business days of the ord",
+          "expected grounded=False, got True: The premium plan costs $49 per year and includes priorit",
+          "expected grounded=False, got True: The product ships within 30 to 50 business days after or",
+          "expected grounded=False, got True: Refunds are not processed within 10 business days of the",
+          "expected grounded=False, got True: The premium plan does not include priority support at $4",
+          "expected grounded=False, got True: The product ships within 3 to 5 business days after the "
+        ]
+      }
+    },
+    "v2 semantic": {
+      "lexical": {
+        "accuracy": 1.0,
+        "missed_hallucinations": 0,
+        "false_alarms": 0,
+        "n": 6,
+        "errors": []
+      },
+      "semantic": {
+        "accuracy": 1.0,
+        "missed_hallucinations": 0,
+        "false_alarms": 0,
+        "n": 8,
+        "errors": []
+      },
+      "all": {
+        "accuracy": 1.0,
+        "missed_hallucinations": 0,
+        "false_alarms": 0,
+        "n": 14,
+        "errors": []
+      }
+    }
+  }
+}

@@ -1,13 +1,19 @@
 # guardrail-gate
 
 ![CI](https://github.com/ahmeddoghri/guardrail-gate/actions/workflows/ci.yml/badge.svg)
-![tests](https://img.shields.io/badge/tests-20%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-76%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![license](https://img.shields.io/badge/license-MIT-black)
 
 > **Catch PII leaks and ungrounded claims in a single pass.** One
 > allowed/blocked decision with the reasons attached. Zero API keys to
 > try it: `python -m app.eval`.
+>
+> The original checks scored 100% on PII and 83% on grounding, and both
+> numbers were measured on the easy half. Against hallucinations that reuse
+> the source's own words, the grounding check missed **6 of 8** and passed a
+> flat negation at 0.90 overlap. `python -m app.advbench` is the benchmark
+> that shows it, and what replaced it.
 
 Picture the coworker who overshares personal details AND makes things up,
 in the same sentence, without noticing either. That's an unguarded LLM
@@ -53,14 +59,113 @@ precision=100%  recall=100%  (n=8)
 accuracy=83%  (n=6)
 ```
 
-The PII benchmark is regex-complete for structured PII (emails, phone
-numbers, SSNs, credit cards, IPs). It won't catch a name or address
-mentioned in prose, which needs real NER. The grounding benchmark is
-lexical-overlap based, which reliably catches the common case (the model
-asserting something the sources never said) but won't catch subtle
-factual drift within an otherwise-grounded sentence. Both limitations are
-disclosed here on purpose. A guardrail you don't understand the limits of
-is worse than no guardrail, because it creates false confidence.
+Those numbers are real, and both were measured on the easy half of the
+problem. Measured against the hard half, the guardrail failed badly enough
+to be worth showing:
+
+```bash
+python -m app.advbench
+```
+
+| detector | split | precision | recall | false pos | false neg |
+| --- | --- | ---: | ---: | ---: | ---: |
+| v1 regex | clean | 100% | 100% | 0 | 0 |
+| v1 regex | obfuscated | 100% | **29%** | 0 | 5 |
+| v1 regex | decoy | **0%** | 100% | 4 | 0 |
+| v2 validating | clean | 100% | 100% | 0 | 0 |
+| v2 validating | obfuscated | 100% | 100% | 0 | 0 |
+| v2 validating | decoy | 100% | 100% | 0 | 0 |
+
+| checker | split | accuracy | hallucinations missed |
+| --- | --- | ---: | ---: |
+| v1 overlap | lexical | 83% | 1 |
+| v1 overlap | **semantic** | **25%** | **6 of 8** |
+| v2 semantic | lexical | 100% | 0 |
+| v2 semantic | semantic | 100% | 0 |
+
+### The grounding check could not see meaning
+
+The README used to say lexical overlap "won't catch subtle factual drift".
+That was the right instinct and much too gentle. Here is what actually got
+through:
+
+```
+source:   "Refunds are processed within 10 business days of the return being received."
+response: "Refunds are NOT processed within 10 business days of the return being received."
+overlap:  0.90  ->  reported as grounded
+```
+
+One inserted word inverts the policy and moves the score by a rounding
+error. Six of eight semantic hallucinations passed, including `$49 per
+month` becoming `$49 per year` at 0.89 overlap, and `3 to 5 business days`
+becoming `30 to 50`.
+
+This is not an edge case, it is the central one. **A model generating from
+retrieved context does not invent new vocabulary; it recombines the
+vocabulary in front of it.** So the hallucinations that actually happen are
+exactly the ones bag-of-words similarity scores highest. The old benchmark
+missed this because its hallucinated cases were written with fresh words
+("free for the first year", "same-day refunds"), which overlap already
+handles.
+
+The fix is not a better similarity metric. It is checking what a claim
+asserts, as a conjunction of things that each carry meaning:
+
+- **Polarity.** A claim and its source must agree about whether something happens.
+- **Quantities.** Every number in the claim, with its unit, must appear in the source. `49:month` and `49:year` are different facts.
+- **Conditions.** "of the return being received" and "of the order being placed" start the clock at different events.
+- **Overlap**, still, as the floor for topical relevance.
+
+Genuine paraphrases survive, which is the constraint that makes it usable:
+"once your order is confirmed" matches "after order confirmation" because
+conditions compare as stemmed word sets, not strings. Zero false alarms
+across the corpus.
+
+### The PII detector matched patterns instead of validating them
+
+It failed in both directions at once. It missed `jane dot doe at example dot
+com`, `123 45 6789`, and `+44 20 7946 0958`: 29% recall on PII as people
+actually type it. And it redacted `Version 1.2.3.4` as an IP address and
+order number `4111 1111 1111 1112` as a credit card, which is the failure
+that gets a redactor switched off entirely.
+
+v2 validates rather than pattern-matches:
+
+- **Luhn checksum plus issuer prefix.** A card is not sixteen digits; it is sixteen digits that check out and begin with a real BIN. `1234567890123456` is not a card.
+- **SSA issuance rules.** 000, 666, and 900-999 are never issued as area numbers.
+- **NANP rules.** Area code and exchange both start 2-9, which is what makes `100-200-3000` a measurement.
+- **Octet range and zero-padding.** `999.888.777.666` is not an address, and `Version 1.2.3.4` is a build number.
+
+Every match carries the reason it fired, because a redaction a reviewer
+cannot explain is one they will override.
+
+### Held out, run once
+
+Both v2 components were built against the corpus above, so those scores are
+in-sample. A separate held-out set was written afterwards with the code
+frozen and evaluated a single time:
+
+| | v1 | v2 |
+| --- | ---: | ---: |
+| PII (14 cases) | precision 55%, recall 75% | **precision 100%, recall 100%** |
+| Grounding (13 cases) | 46% | **85%** |
+
+v2 misses two held-out cases, both the same shape: `"...on weekdays"`
+rewritten as `"...on weekends"`. That is a scope substitution with no number,
+no negation, and no prepositional condition to catch it. It is deliberately
+not patched, because tuning against a holdout after reading the result is how
+a holdout stops being one. It stands as the documented failure mode: **v2
+checks polarity, quantities, and conditions, so a hallucination that swaps
+one bare noun for a related one can still get through.**
+
+### Limits
+
+- **Still no NER.** Names and street addresses in prose need a real model; the `PIIDetector` protocol takes one.
+- **Still not entailment.** This checks four specific things well, not arbitrary logical consequence.
+- **A blocked response is not always wrong**, and an allowed one is not verified true. This is a filter, not an oracle.
+
+Both versions remain selectable (`GuardrailGate(version="v1")`) so the
+comparison is reproducible rather than a claim you have to take on faith.
 
 ## Install & run
 

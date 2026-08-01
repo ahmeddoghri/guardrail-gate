@@ -27,6 +27,33 @@ jobs:
       - name: Run benchmark
         run: python -m app.eval
 
+  adversarial:
+    # A guardrail can regress silently: it keeps returning decisions, they are
+    # just wrong. This fails the build if hallucinations start getting through
+    # or if the redactor starts mangling order numbers again.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Measure against the hard half
+        run: |
+          python -m app.advbench
+          python - <<'EOF'
+          from app.advbench import build_report
+
+          report = build_report()
+          grounding = report["grounding"]["v2 semantic"]
+          pii = report["pii"]["v2 validating"]
+
+          assert grounding["all"]["missed_hallucinations"] == 0, grounding["all"]
+          assert grounding["all"]["false_alarms"] == 0, grounding["all"]
+          assert pii["decoy"]["false_positives"] == 0, pii["decoy"]
+          assert pii["obfuscated"]["recall"] == 1.0, pii["obfuscated"]
+          print("guardrail holds on the adversarial corpus")
+          EOF
+
   docker:
     runs-on: ubuntu-latest
     steps:
